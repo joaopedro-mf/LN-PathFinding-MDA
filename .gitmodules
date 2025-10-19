@@ -1,0 +1,3 @@
+[submodule "multiobjectiveDijkstra"]
+	path = multiobjectiveDijkstra
+	url = https://github.com/joaopedro-mf/multiobjectiveDijkstra.git
