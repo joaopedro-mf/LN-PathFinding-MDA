@@ -32,9 +32,13 @@ df = df.drop_duplicates()
 
 #-------------------------------------------------------------------------------------------------
 #seperate each field from the string
+#seperate each field from the string
 def extract_field(num, col):
     extract_list = []
     for i in df[col]:
+        i = i.replace('np.float64(','')
+        i = i.replace('np.int64(','')
+        i = i.replace('),',',')
         elem = ast.literal_eval(i)
         extract_list.append(elem[num])
     return extract_list
@@ -78,6 +82,7 @@ for a in algo:
         else:
             lrange = 10**i
         rrange = 10**(i+step)
+        print(df1['amount'])
         data = df1[(df1['amount']>lrange) & (df1['amount']<=rrange)]
         amt_bins.append(len(data))
         slist.append(len(data[data[f'{a}tp'] == 'Success']))
@@ -111,10 +116,10 @@ def df_plot(data, amt_bins, algo, title, xlabel, ylabel):
     xticks = [i for i in range(len(ratio_df))]
     xticklabels = [rf'$10^{i}-10^{i+step}$' for i in range(start, end, step)] 
     # xticklabels = [rf'${i}-{i+step}$' for i in range(start, end, step)]
-    plt.xticks(xticks, xticklabels, rotation=0, fontsize=7)
+    plt.xticks(xticks, xticklabels, rotation=0, fontsize=12)
     plt.show()
 
-df_plot(srate, amt_bins, algo, 'Success Rate', 'Amount Bins', 'Ratio') #plot success rate (line graph)
+df_plot(srate, amt_bins, algo, 'Taxa de Sucesso', 'Montante Enviado', 'Taxa') #plot success rate (line graph)
 #-------------------------------------------------------------------------------------------------
 #graph types
 def plot_graph(x, y, kind, xlog, ylog, title, xlabel, ylabel):
@@ -133,7 +138,7 @@ def plot_graph(x, y, kind, xlog, ylog, title, xlabel, ylabel):
     xticks = [i for i in range(len(x)+1)]
     xticklabels = [''] + [rf'$10^{i}-10^{i+step}$' for i in range(start, end, step)]  
     # xticklabels = ['']+ [rf'${i}-{i+step}$' for i in range(start, end, step)]
-    plt.xticks(xticks, xticklabels,fontsize=8)
+    plt.xticks(xticks, xticklabels,fontsize=12)
     plt.show()
     
 #find median fee in the amount bin, return list of list of fees in bins, list of median fee   
@@ -181,7 +186,7 @@ for i in df1.index:
 # save_df = pd.DataFrame(index=['Weighted avg median fee', 'WAvg path length', 'WAvg Delay', 'avg_path', 'Avg delay'])
 save_df = pd.DataFrame(columns=algo)
 mad_df = pd.DataFrame(columns=algo)
-metrics_df = pd.DataFrame(index=['Fee Ratio', 'Path Length', 'Timelock'])
+metrics_df = pd.DataFrame(index=['Razao da taxa', 'Comprimento do caminho', 'Tempo de bloqueio'])
 for a in algo:
     # pdf = pd.DataFrame(columns=['Fee ratio'])
     # grp_val = sfee[[f'{a}fee', 'amount']].sort_values('amount').groupby('amount')
@@ -191,7 +196,7 @@ for a in algo:
     val = sfee[[f'{a}fee', 'amount']]
     name = f'{a}fee'
     fee_list, fee_med, amount_list, fee_med_ratio, fee_ratio_list = fee_df(val, name, step)
-    plot_graph(fee_list, 0, 'box', False, True, f'{a} Fee', 'Amount Bins', 'Fee (log scale)')
+    plot_graph(fee_list, 0, 'box', False, True, f'{a} Taxa', 'Montante', 'Taxa (log scale)')
     # plot_graph(range(len(fee_med)), fee_med,'scatter', False, True, f'{a} Median Fee', 'Amount', 'Fee')
     
     w_sum = 0 
@@ -245,10 +250,10 @@ def sns_plot(data, kind, xlog, ylog, title, xlabel, ylabel):
 
 
 data = sfee[[f'{a}pthlnt' for a in algo]]
-sns_plot(data, 'hist', False, False, 'Path Length', 'Path Length', 'Count')
+sns_plot(data, 'hist', False, False, 'Comprimento do caminho', 'Comprimento do caminho', 'Count')
 # sns_plot(data, 'kde', False, False, 'Path length (KDE)', '', '')
 
-dd = df['Amount']
+dd = df['Montante']
 print(len(dd))
 dd = dd.replace(float('inf'), None).dropna()
 

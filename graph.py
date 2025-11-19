@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 class Graph:
     def __init__(self, config):
         self.datasampling = config['General']['datasampling']
-        self.generate_sampling = config['General']['generate_sampling']
         self.y = []
         self.G = nx.DiGraph()
 
@@ -49,15 +48,6 @@ class Graph:
             G.edges[u,v]['htlc_max'] = int(re.split(r'(\d+)', df['htlc_maximum_msat'][i])[1])/1000
             G.edges[u,v]['LastFailure'] = 100
 
-            if self.generate_sampling:
-                self.assign_balances((u,v))
-
-        ### filename =  (TODO FROM CONFIG)
-        if self.generate_sampling:
-            self.save_balances()
-        else:
-            self.load_balances()
-
       
     def assign_balances_all_nodes(self):
         G= self.G
@@ -78,10 +68,10 @@ class Graph:
     def assign_balances(self, i):
         #Sample balance from bimodal or uniform distribution
         G= self.G
+        (u,v) = i
         cap = G.edges[u,v]['capacity']
          
         x = self.get_random_balance(cap, i)
-        (u,v) = i
         G.edges[(u,v)]['Balance'] = x
         G.edges[(v,u)]['Balance'] = cap - x
         
@@ -119,7 +109,7 @@ class Graph:
         return int(rn.uniform(0, self.G.edges[i]['capacity']))
     
 
-    def save_balances(self, filename= './balances/channel_balances.csv'):
+    def save_balances(self, filename= './sampling/channel_balances.csv'):
         balance_data = []
         for u, v in self.G.edges():
             balance_data.append({
@@ -135,8 +125,7 @@ class Graph:
         df.to_csv(filename, index=False)
         print(f"Balances saved to {filename}")
 
-    def load_balances(self, filename='./balances/channel_balances.csv'):
-        """Load channel balances from CSV file and update graph"""
+    def load_balances(self, filename='./sampling/channel_balances.csv'):
         try:
             df = pd.read_csv(filename)
             node_pubkey_to_id = {self.G.nodes[n]['pubkey']: n for n in self.G.nodes()}

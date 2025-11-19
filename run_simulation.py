@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 import scipy.optimize as opt
 import pickle
 
+from graph import Graph
+
 startTime = datetime.datetime.now()
  
 
@@ -94,85 +96,21 @@ hist_liquidity_penalty_amt_multiplier = float(config['LDK']['h_pen_amt_mul'])/10
 
 
 #---------------------------------------------------------------------------
-def make_graph(G):
-    df = pd.read_csv('LN_snapshot.csv')
-    is_multi = df["short_channel_id"].value_counts() > 1
-    df = df[df["short_channel_id"].isin(is_multi[is_multi].index)]
-    node_num = {}
-    nodes_pubkey = list(OrderedSet(list(df['source']) + list(df['destination'])))
-    for i in range(len(nodes_pubkey)):
-        G.add_node(i)
-        pubkey = nodes_pubkey[i]
-        G.nodes[i]['pubkey'] = pubkey
-        node_num[pubkey] = i
-    for i in df.index:
-        node_src = df['source'][i]
-        node_dest = df['destination'][i]
-        u = node_num[node_src]
-        v = node_num[node_dest]
-        G.add_edge(u,v)
-        channel_id = df['short_channel_id'][i]
-        block_height = int(channel_id.split('x')[0])
-        G.edges[u,v]['id'] = channel_id
-        G.edges[u,v]['capacity'] = int(df['satoshis'][i])#uncomment
-        # G.edges[u,v]['capacity'] = 10**8 #new
-        G.edges[u,v]['UpperBound'] = int(df['satoshis'][i])
-        # G.edges[u,v]['UpperBound'] = 10**8 #new
-        G.edges[u,v]['LowerBound'] = 0
-        G.edges[u,v]['Age'] = block_height 
-        G.edges[u,v]['BaseFee'] = df['base_fee_millisatoshi'][i]/1000
-        G.edges[u,v]['FeeRate'] = df['fee_per_millionth'][i]/1000000
-        G.edges[u,v]['Delay'] = df['delay'][i]
-        G.edges[u,v]['htlc_min'] = int(re.split(r'(\d+)', df['htlc_minimum_msat'][i])[1])/1000
-        G.edges[u,v]['htlc_max'] = int(re.split(r'(\d+)', df['htlc_maximum_msat'][i])[1])/1000
-        G.edges[u,v]['LastFailure'] = 100
-    return G
 
-      
-G = nx.DiGraph()
-G = make_graph(G)
+graph = Graph(config)
 
-y = []
-cc = 0
-#Sample balance from bimodal or uniform distribution
-for i in G.edges:#new
-    if 'Balance' not in G.edges[i]:
-        cap = G.edges[i]['capacity']
-        datasample = config['General']['datasampling']
-        if datasample == 'bimodal':
-            rng = np.linspace(0, cap, 10000)
-            s = cap/10
-            P = np.exp(-rng/s) + np.exp((rng - cap)/s)
-            P /= np.sum(P)            
-            x = int(np.random.choice(rng, p=P))
-            # if cc<5:
-            #     plt.plot(P)
-            #     plt.show()
-            #     cc += 1
-        else:
-            x = int(rn.uniform(0, G.edges[i]['capacity']))
-            
-        (u,v) = i
-        G.edges[(u,v)]['Balance'] = x
-        G.edges[(v,u)]['Balance'] = cap - x
-        
-        y.append(x)
-        y.append(cap-x)
-        
-        if G.edges[v,u]['Balance'] < 0 or G.edges[v,u]['Balance'] > G.edges[i]['capacity']:
-            print(i, 'Balance error at', (v,u))
-            raise ValueError
-            
-        if G.edges[u,v]['Balance'] < 0 or G.edges[u,v]['Balance'] > G.edges[i]['capacity']:
-            print(i, 'Balance error at', (u,v))
-            raise ValueError
-            
-        if G.edges[(v,u)]['Balance'] + G.edges[(u,v)]['Balance'] != cap:
-            print('Balance error at', (v,u))
-            raise ValueError
+graph.make_graph()
 
-plt.hist(y)
-plt.show()
+### filename =  (TODO FROM CONFIG)
+if config['General']['generate_sampling']:
+    graph.assign_balances_all_nodes()
+    graph.save_balances("./sampling/channel_balances_fixed.csv")
+else:
+    graph.load_balances()
+
+graph.plot_balance_distribution()
+
+G = graph.G
 
 
 def callable(source, target, amt, result, name):
